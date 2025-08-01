@@ -46,6 +46,17 @@
 #define SF_ITEM_ALWAYS_TOUCHABLE	(1<<6) // This needs to stay synced with the weapon spawnflag
 #endif
 
+#ifdef CSS_WEAPONS_IN_HL2
+#define SIZE_AMMO_45ACP				20
+#define SIZE_AMMO_45ACP_LARGE		60
+#define SIZE_AMMO_357SIG			13
+#define SIZE_AMMO_357SIG_LARGE		39
+#define SIZE_AMMO_556mm			30
+#define SIZE_AMMO_556mm_LARGE		60
+#define SIZE_AMMO_762mm			30
+#define SIZE_AMMO_762mm_LARGE		60
+#endif
+
 
 class CItem : public CBaseAnimating, public CDefaultPlayerPickupVPhysics
 {
