@@ -13,6 +13,7 @@ $Configuration
 		$PreprocessorDefinitions		"$BASE;MAPBASE_RPC;DISCORD_RPC;STEAM_RPC"	[$MAPBASE_RPC&&!$LINUXALL]
 		$PreprocessorDefinitions		"$BASE;MAPBASE_VSCRIPT"		[$MAPBASE_VSCRIPT]
 		$PreprocessorDefinitions		"$BASE;NEW_RESPONSE_SYSTEM"		[$NEW_RESPONSE_SYSTEM]
+		$PreprocessorDefinitions		"$BASE;HL2_PLAYER_TALKER"		[$HL2_PLAYER_TALKER]
 	}
 }
 
@@ -76,6 +77,9 @@ $Project
 			$File	"mapbase\c_weapon_custom_hl2.cpp"
 			$File	"mapbase\mapbase_autocubemap.cpp"
 			$File	"mapbase\hud_generic_timer.cpp"
+
+			$File	"mapbase\c_hl2_player_talker.cpp" [$HL2_PLAYER_TALKER]
+			$File	"mapbase\c_hl2_player_talker.h" [$HL2_PLAYER_TALKER]
 		}
 		
 		$Folder "HL2 DLL"
