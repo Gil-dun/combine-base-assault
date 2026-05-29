@@ -136,8 +136,12 @@ ConceptInfo_t g_ConceptInfos[] =
 	{ 	TLK_COMBAT_IDLE,		SPEECH_IMPORTANT,-1,	-1,		-1,		-1,		 -1,	-1,		AICF_DEFAULT,	},
 	{ 	TLK_LOSTENEMY,			SPEECH_IMPORTANT,-1,	-1,		-1,		-1,		 -1,	-1,		AICF_DEFAULT,	},
 	{ 	TLK_REFINDENEMY,		SPEECH_IMPORTANT,-1,	-1,		-1,		-1,		 -1,	-1,		AICF_DEFAULT,	},
-	// CBA TLK_THROWGRENADE implementation
-	{ TLK_THROWGRENADE,		SPEECH_PRIORITY, 	-1,		-1,		-1,		-1,		-1,		-1,		AICF_DEFAULT, },
+#endif
+
+#ifdef CBA
+	// CBA TLK_THROWGRENADE, TLK_MELEE implementation
+{ TLK_THROWGRENADE,		SPEECH_PRIORITY, 	-1,		-1,		-1,		-1,		-1,		-1,		AICF_DEFAULT, },
+{ TLK_MELEE,			SPEECH_IMPORTANT, 	-1,		-1,		-1,		-1,		-1,		-1,		AICF_DEFAULT, },
 #endif
 };
 

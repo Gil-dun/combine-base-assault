@@ -613,6 +613,10 @@ void CNPC_Citizen::Spawn()
 		pRPG->StopGuiding();
 	}
 
+#ifdef CBA
+	//CapabilitiesAdd(bits_CAP_INNATE_MELEE_ATTACK1);
+#endif
+
 	m_flTimePlayerStare = FLT_MAX;
 
 	AddEFlags( EFL_NO_DISSOLVE | EFL_NO_MEGAPHYSCANNON_RAGDOLL | EFL_NO_PHYSCANNON_INTERACTION );
@@ -2110,6 +2114,83 @@ Activity CNPC_Citizen::NPC_TranslateActivity( Activity activity )
 
 	return BaseClass::NPC_TranslateActivity( activity );
 }
+
+
+#ifdef COMPANION_MELEE_ATTACK
+//-----------------------------------------------------------------------------
+// Purpose: Overridden so that citizens cannot melee attack without a weapon
+// Input  :
+// Output :
+//-----------------------------------------------------------------------------
+int CNPC_Citizen::MeleeAttack1Conditions(float flDot, float flDist)
+{
+	if (GetActiveWeapon() == NULL)
+	{
+		return COND_NONE;
+	}
+
+	return BaseClass::MeleeAttack1Conditions(flDot, flDist);
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CNPC_Citizen::OnChangeActivity(Activity eNewActivity)
+{
+	BaseClass::OnChangeActivity(eNewActivity);
+
+#ifdef EZ
+	if (m_Type == CT_LONGFALL)
+	{
+		switch (eNewActivity)
+		{
+		case ACT_JUMP:
+		{
+			// Do the jump particle
+			DispatchParticleEffect("citizen_longfall_jump", PATTACH_POINT_FOLLOW, this, LookupAttachment("backpack_end"));
+
+			// Make the chest eye a different color while we're jumping
+			if (m_pEyeGlow)
+			{
+				m_pEyeGlow->SetRenderColor(LONGFALL_GLOW_CHEST_JUMP_R, LONGFALL_GLOW_CHEST_JUMP_G, LONGFALL_GLOW_CHEST_JUMP_B, LONGFALL_GLOW_CHEST_JUMP_A);
+				m_pEyeGlow->SetBrightness(LONGFALL_GLOW_CHEST_JUMP_BRIGHT, npc_citizen_longfall_glow_chest_jump_fade_enter.GetFloat());
+				m_pEyeGlow->SetScale(LONGFALL_GLOW_CHEST_JUMP_SCALE, npc_citizen_longfall_glow_chest_jump_fade_enter.GetFloat());
+			}
+
+			EmitSound("NPC_Citizen_JumpRebel.Jump");
+		} break;
+
+		case ACT_GLIDE:
+			break;
+
+		case ACT_LAND:
+		{
+			EmitSound("NPC_Citizen_JumpRebel.Land");
+		}
+		// Need to have a default case here due to jump rebels not always switching to ACT_LAND after jumping
+		default:
+		{
+			// If we were jumping, return the chest eye to its normal color
+			if (m_pEyeGlow && m_pEyeGlow->GetBrightness() == LONGFALL_GLOW_CHEST_JUMP_BRIGHT)
+			{
+				m_pEyeGlow->SetRenderColor(LONGFALL_GLOW_CHEST_R, LONGFALL_GLOW_CHEST_G, LONGFALL_GLOW_CHEST_B, LONGFALL_GLOW_CHEST_A);
+				m_pEyeGlow->SetBrightness(LONGFALL_GLOW_CHEST_BRIGHT, npc_citizen_longfall_glow_chest_jump_fade_exit.GetFloat());
+				m_pEyeGlow->SetScale(LONGFALL_GLOW_CHEST_SCALE, npc_citizen_longfall_glow_chest_jump_fade_exit.GetFloat());
+			}
+		}
+		break;
+		}
+	}
+#endif
+	if (eNewActivity == ACT_MELEE_ATTACK1 && GetEnemy())
+	{
+		// Say something when we begin a melee attack
+		SpeakIfAllowed(TLK_MELEE);
+	}
+}
+
+#endif
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

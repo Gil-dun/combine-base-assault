@@ -929,6 +929,7 @@ CAPCMissile *FindAPCMissileInCone( const Vector &vecOrigin, const Vector &vecDir
 // Specialized version of the missile
 //
 //-----------------------------------------------------------------------------
+#ifndef CBA
 #define MAX_HOMING_DISTANCE 2250.0f
 #define MIN_HOMING_DISTANCE 1250.0f
 #define MAX_NEAR_HOMING_DISTANCE 1750.0f
@@ -940,6 +941,19 @@ CAPCMissile *FindAPCMissileInCone( const Vector &vecOrigin, const Vector &vecDir
 #define	APC_LAUNCH_HOMING_SPEED	0.1f
 #define	APC_HOMING_SPEED	0.025f
 #define HOMING_SPEED_ACCEL	0.01f
+#else
+#define MAX_HOMING_DISTANCE 4096.0f
+#define MIN_HOMING_DISTANCE 256.0f
+#define MAX_NEAR_HOMING_DISTANCE 1750.0f
+#define MIN_NEAR_HOMING_DISTANCE 1000.0f
+#define DOWNWARD_BLEND_TIME_START 0.2f
+#define MIN_HEIGHT_DIFFERENCE	250.0f
+#define MAX_HEIGHT_DIFFERENCE	550.0f
+#define CORRECTION_TIME		0.2f
+#define	APC_LAUNCH_HOMING_SPEED	0.1f
+#define	APC_HOMING_SPEED	0.04f
+#define HOMING_SPEED_ACCEL	0.025f
+#endif
 
 BEGIN_DATADESC( CAPCMissile )
 
@@ -2392,6 +2406,14 @@ void EnableLaserDot( CBaseEntity *pLaserDot, bool bEnable )
 		pDot->TurnOff();
 	}
 }
+
+#ifdef CBA
+bool DoesLaserDotHaveTarget(CBaseEntity* pLaserDot)
+{
+	CLaserDot* pDot = assert_cast<CLaserDot*>(pLaserDot);
+	return (pDot->GetTargetEntity() != NULL);
+}
+#endif // CBA
 
 CLaserDot::CLaserDot( void )
 {

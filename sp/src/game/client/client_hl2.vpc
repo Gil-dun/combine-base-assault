@@ -126,5 +126,10 @@ $Project "Client (HL2)"
 				$File	"$SRCDIR\game\shared\hl2\weapon_css_smgs.cpp"
 				$File	"$SRCDIR\game\shared\hl2\weapon_css_misc.cpp"
 			}
+
+			$Folder	"Human Error"
+			{
+				$File	"$SRCDIR\game\client\human_error\c_vehicle_drivable_apc.cpp"
+			}
 	}
 }

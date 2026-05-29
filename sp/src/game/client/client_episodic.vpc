@@ -15,7 +15,7 @@ $Configuration
 	$Compiler
 	{
 		$AdditionalIncludeDirectories	".\hl2;.\hl2\elements;$SRCDIR\game\shared\hl2;$SRCDIR\game\shared\episodic;..\..\public;$BASE"
-		$PreprocessorDefinitions		"$BASE;HL2_CLIENT_DLL;HL2_EPISODIC"
+		$PreprocessorDefinitions		"$BASE;HL2_CLIENT_DLL;CBA;HL2_EPISODIC"
 		$PreprocessorDefinitions		"$BASE;CSS_WEAPONS_IN_HL2"
 	}
 }
@@ -138,6 +138,16 @@ $Project "Client (Episodic)"
 				$File	"$SRCDIR\game\shared\hl2\weapon_css_shotguns.cpp"
 				$File	"$SRCDIR\game\shared\hl2\weapon_css_smgs.cpp"
 				$File	"$SRCDIR\game\shared\hl2\weapon_css_misc.cpp"
+			}
+
+			$Folder	"Human Error"
+			{
+				$File	"$SRCDIR\game\client\human_error\c_vehicle_drivable_apc.cpp"
+			}			
+			
+			$Folder	"CBA"
+			{
+				$File	"$SRCDIR\game\shared\cba\achievements_cbar.cpp"
 			}
 		}
 	}

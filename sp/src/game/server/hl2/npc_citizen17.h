@@ -164,6 +164,11 @@ public:
 	void 			OnChangeActiveWeapon( CBaseCombatWeapon *pOldWeapon, CBaseCombatWeapon *pNewWeapon );
 
 	bool			ShouldLookForBetterWeapon();
+	
+#ifdef COMPANION_MELEE_ATTACK
+	void			OnChangeActivity(Activity eNewActivity);
+	int				MeleeAttack1Conditions(float flDot, float flDist);
+#endif
 
 
 	//---------------------------------

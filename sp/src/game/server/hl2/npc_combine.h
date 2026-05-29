@@ -35,6 +35,9 @@
 #define SF_COMBINE_NO_LOOK	(1 << 16)
 #define SF_COMBINE_NO_GRENADEDROP ( 1 << 17 )
 #define SF_COMBINE_NO_AR2DROP ( 1 << 18 )
+#ifdef CBA
+#define SF_COMBINE_NO_MANHACK_DEPLOY ( 1 << 21 ) // Blixibon -- Manhack toss spawnflag
+#endif
 
 //=========================================================
 //	>> CNPC_Combine
@@ -105,6 +108,16 @@ public:
 	void InputSetPoliceGoal( inputdata_t &inputdata );
 #endif
 
+#ifdef CBA
+	void InputEnableManhackToss(inputdata_t& inputdata);
+	void InputDisableManhackToss(inputdata_t& inputdata);
+	void InputDeployManhack(inputdata_t& inputdata);
+	void InputAddManhacks(inputdata_t& inputdata);
+	void InputSetManhacks(inputdata_t& inputdata);
+
+	COutputEHANDLE	m_OutManhack;
+#endif
+
 	bool			UpdateEnemyMemory( CBaseEntity *pEnemy, const Vector &position, CBaseEntity *pInformer = NULL );
 
 	void			Spawn( void );
@@ -156,6 +169,15 @@ public:
 
 	bool			OnBeginMoveAndShoot();
 	void			OnEndMoveAndShoot();
+
+#ifdef CBA
+	bool			CanDeployManhack(void);
+	void			ReleaseManhack(void);
+	void			OnAnimEventDeployManhack(animevent_t* pEvent);
+	void			OnAnimEventStartDeployManhack(void);
+	void			OnScheduleChange();
+	virtual void	HandleManhackSpawn(CAI_BaseNPC* pNPC) {}
+#endif
 
 	// Combat
 	WeaponProficiency_t CalcWeaponProficiency( CBaseCombatWeapon *pWeapon );
@@ -222,6 +244,23 @@ protected:
 	CAI_Sentence< CNPC_Combine > *GetSentences() { return &m_Sentences; }
 #endif
 
+#ifdef CBA
+	int				m_iManhacks;
+	AIHANDLE		m_hManhack = NULL;
+
+	// 1upD - If true, player +USE has no effect
+	bool m_bDisablePlayerUse;
+
+	// TRS_NONE = Don't care, modified from global state if the player orders a surrender
+	// TRS_TRUE = Can always order surrender
+	// TRS_FALSE = Can never order surrender
+	ThreeState_t m_iCanOrderSurrender;
+
+	// TRS_NONE = Don't care, only allow give when commandable
+	// TRS_TRUE = Can always be given weapons/items
+	// TRS_FALSE = Can never be given weapons/items
+	ThreeState_t m_iCanPlayerGive;
+#endif
 private:
 	//=========================================================
 	// Combine S schedules
@@ -261,6 +300,9 @@ private:
 		SCHED_COMBINE_MOVE_TO_FORCED_GREN_LOS,
 		SCHED_COMBINE_FACE_IDEAL_YAW,
 		SCHED_COMBINE_MOVE_TO_MELEE,
+#ifdef CBA
+		SCHED_COMBINE_DEPLOY_MANHACK,
+#endif
 		NEXT_SCHEDULE,
 	};
 

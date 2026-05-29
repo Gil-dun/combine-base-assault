@@ -26,6 +26,8 @@ $Conditional NEW_RESPONSE_SYSTEM	"1" // Toggles the new Response System library 
 		// Toggles a version of CHL2_Player which supports the Response System
 $Conditional HL2_PLAYER_TALKER	"1"
 //-----------------------------------------------------------------------------
+$Conditional CBA	"1" // CBA preprocessor
+//-----------------------------------------------------------------------------
 
 $Configuration "Debug"
 {
@@ -42,6 +44,9 @@ $Configuration "Debug"
 
 		// Mapbase base definitions
 		$PreprocessorDefinitions		"$BASE;MAPBASE"		[$MAPBASE]
+		
+		//CBA Definitions
+		$PreprocessorDefinitions		"$BASE;CBA"		[$CBA]
 	}
 }
 
@@ -60,5 +65,8 @@ $Configuration "Release"
 
 		// Mapbase base definitions
 		$PreprocessorDefinitions		"$BASE;MAPBASE"		[$MAPBASE]
+
+		//CBA Definitions
+		$PreprocessorDefinitions		"$BASE;CBA"		[$CBA]
 	}
 }

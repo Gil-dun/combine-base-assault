@@ -6427,6 +6427,36 @@ static void CreateJeep( CBasePlayer *pPlayer )
 	}
 }
 
+#ifdef CBA
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+static void CreateAPC( CBasePlayer *pPlayer )
+{
+	// Cheat to create a drivable APC in front of the player
+	Vector vecForward;
+	AngleVectors( pPlayer->EyeAngles(), &vecForward );
+#if defined ( CBA )
+	CBaseEntity *pAPC = (CBaseEntity *)CreateEntityByName( "prop_vehicle_drivable_apc" );
+#endif
+	if ( pAPC )
+	{
+		Vector vecOrigin = pPlayer->GetAbsOrigin() + vecForward * 256 + Vector(0,0,64);
+		QAngle vecAngles( 0, pPlayer->GetAbsAngles().y - 90, 0 );
+		pAPC->SetAbsOrigin( vecOrigin );
+		pAPC->SetAbsAngles( vecAngles );
+		pAPC->KeyValue( "model", "models/vehicles/combine_apc.mdl" );
+		pAPC->KeyValue( "solid", "6" );
+#if defined ( CBA )
+		pAPC->KeyValue( "targetname", "drivable_apc" );
+#endif
+		pAPC->KeyValue( "vehiclescript", "scripts/vehicles/drivable_apc.txt" );
+		DispatchSpawn( pAPC );
+		pAPC->Activate();
+		pAPC->Teleport( &vecOrigin, &vecAngles, NULL );
+	}
+}
+#endif
 
 void CC_CH_CreateJeep( void )
 {
@@ -6435,8 +6465,15 @@ void CC_CH_CreateJeep( void )
 		return;
 	CreateJeep( pPlayer );
 }
+void CC_CH_CreateAPC( void )
+{
+	CBasePlayer *pPlayer = UTIL_GetCommandClient();
+	if ( !pPlayer )
+		return;
+	CreateAPC( pPlayer );
+}
 
-static ConCommand ch_createjeep("ch_createjeep", CC_CH_CreateJeep, "Spawn jeep in front of the player.", FCVAR_CHEAT);
+static ConCommand ch_createapc("ch_createdrivableapc", CC_CH_CreateAPC, "Spawn drivable APC in front of the player.", FCVAR_CHEAT);
 
 
 //-----------------------------------------------------------------------------

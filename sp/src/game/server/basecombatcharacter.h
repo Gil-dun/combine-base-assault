@@ -482,6 +482,10 @@ public:
 	virtual bool		RemoveClassRelationship( Class_T nClass );
 #endif
 
+#ifdef CBA
+	static Disposition_t		GetDefaultRelationshipDispositionBetweenClasses(Class_T nClassTarget1, Class_T nClassTarget2);
+#endif
+
 	virtual void		ChangeTeam( int iTeamNum );
 
 	// Nav hull type

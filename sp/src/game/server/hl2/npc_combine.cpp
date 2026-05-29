@@ -34,6 +34,9 @@
 #include "globalstate.h"
 #include "sceneentity.h"
 #endif
+#ifdef CBA
+#include "npc_manhack.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -75,6 +78,19 @@ ConVar npc_combine_fixed_shootpos( "npc_combine_fixed_shootpos", "0", FCVAR_NONE
 #define COMBINE_SHOTGUN_CROUCHING_POSITION	Vector( 0, 0, 36 )
 #define COMBINE_MIN_CROUCH_DISTANCE		256.0
 
+#ifdef CBA
+// 
+// Blixibon - Combine manhack support
+// 
+// Soldiers can now carry and deploy manhacks like metrocops do.
+// 
+
+#define	COMBINE_BODYGROUP_MANHACK	1
+
+// Metrocops use their own squad slot, but for soldiers we can get away with re-using the "special attack" squad slot elites use.
+#define SQUAD_SLOT_COMBINE_DEPLOY_MANHACK SQUAD_SLOT_SPECIAL_ATTACK
+#endif
+
 //-----------------------------------------------------------------------------
 // Static stuff local to this file.
 //-----------------------------------------------------------------------------
@@ -109,6 +125,11 @@ int COMBINE_AE_BEGIN_ALTFIRE;
 int COMBINE_AE_ALTFIRE;
 #endif
 
+#ifdef CBA
+static int AE_METROPOLICE_START_DEPLOY;
+static int AE_METROPOLICE_DEPLOY_MANHACK;
+#endif
+
 //=========================================================
 // Combine activities
 //=========================================================
@@ -133,6 +154,9 @@ Activity ACT_WALK_MARCH;
 Activity ACT_TURRET_CARRY_IDLE;
 Activity ACT_TURRET_CARRY_WALK;
 Activity ACT_TURRET_CARRY_RUN;
+#endif
+#ifdef CBA
+extern int ACT_METROPOLICE_DEPLOY_MANHACK;
 #endif
 
 // -----------------------------------------------
@@ -232,6 +256,17 @@ DEFINE_INPUTFUNC( FIELD_INTEGER,	"SetTacticalVariant",	InputSetTacticalVariant )
 DEFINE_INPUTFUNC( FIELD_STRING, "SetPoliceGoal", InputSetPoliceGoal ),
 
 DEFINE_AIGRENADE_DATADESC()
+#endif
+
+#ifdef CBA
+DEFINE_KEYFIELD(m_iManhacks, FIELD_INTEGER, "manhacks"),
+DEFINE_FIELD(m_hManhack, FIELD_EHANDLE),
+DEFINE_INPUTFUNC(FIELD_VOID, "EnableManhackToss", InputEnableManhackToss),
+DEFINE_INPUTFUNC(FIELD_VOID, "DisableManhackToss", InputDisableManhackToss),
+DEFINE_INPUTFUNC(FIELD_VOID, "DeployManhack", InputDeployManhack),
+DEFINE_INPUTFUNC(FIELD_INTEGER, "AddManhacks", InputAddManhacks),
+DEFINE_INPUTFUNC(FIELD_INTEGER, "SetManhacks", InputSetManhacks),
+DEFINE_OUTPUT(m_OutManhack, "OutManhack"),
 #endif
 
 #ifndef MAPBASE
@@ -409,6 +444,52 @@ void CNPC_Combine::InputSetPoliceGoal( inputdata_t &inputdata )
 }
 #endif
 
+#ifdef CBA
+//-----------------------------------------------------------------------------
+// Purpose: Enables manhack toss
+// Input  : &inputdata - 
+//-----------------------------------------------------------------------------
+void CNPC_Combine::InputEnableManhackToss(inputdata_t& inputdata)
+{
+	if (HasSpawnFlags(SF_COMBINE_NO_MANHACK_DEPLOY))
+	{
+		RemoveSpawnFlags(SF_COMBINE_NO_MANHACK_DEPLOY);
+	}
+}
+
+void CNPC_Combine::InputDisableManhackToss(inputdata_t& inputdata)
+{
+	if (!HasSpawnFlags(SF_COMBINE_NO_MANHACK_DEPLOY))
+	{
+		AddSpawnFlags(SF_COMBINE_NO_MANHACK_DEPLOY);
+	}
+}
+
+void CNPC_Combine::InputDeployManhack(inputdata_t& inputdata)
+{
+	// I am aware this bypasses regular deployment conditions, but the mapper wants us to deploy a manhack, damn it!
+	// We do have to have one, though.
+	if (m_iManhacks > 0)
+	{
+		SetSchedule(SCHED_COMBINE_DEPLOY_MANHACK);
+	}
+}
+
+void CNPC_Combine::InputAddManhacks(inputdata_t& inputdata)
+{
+	m_iManhacks += inputdata.value.Int();
+
+	SetBodygroup(COMBINE_BODYGROUP_MANHACK, (m_iManhacks > 0));
+}
+
+void CNPC_Combine::InputSetManhacks(inputdata_t& inputdata)
+{
+	m_iManhacks = inputdata.value.Int();
+
+	SetBodygroup(COMBINE_BODYGROUP_MANHACK, (m_iManhacks > 0));
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
@@ -490,6 +571,14 @@ void CNPC_Combine::Spawn( void )
 	m_flNextAltFireTime = gpGlobals->curtime;
 
 	NPCInit();
+
+#ifdef CBA
+	// Start us with a visible manhack if we have one
+	if (m_iManhacks)
+	{
+		SetBodygroup(COMBINE_BODYGROUP_MANHACK, true);
+	}
+#endif
 
 #ifdef MAPBASE
 	// This was moved from CalcWeaponProficiency() so soldiers don't change skin unnaturally and uncontrollably
@@ -1440,6 +1529,14 @@ bool CNPC_Combine::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **
 //-----------------------------------------------------------------------------
 void CNPC_Combine::Event_Killed( const CTakeDamageInfo &info )
 {
+#ifdef CBA
+		// Blixibon - Release the manhack if we're in the middle of deploying him
+		if (m_hManhack && m_hManhack->IsAlive())
+		{
+			ReleaseManhack();
+			m_hManhack = NULL;
+		}
+#endif
 	// if I was killed before I could finish throwing my grenade, drop
 	// a grenade item that the player can retrieve.
 	if( GetActivity() == ACT_RANGE_ATTACK2 )
@@ -1677,6 +1774,19 @@ int CNPC_Combine::GetSoundInterests( void )
 //-----------------------------------------------------------------------------
 bool CNPC_Combine::QueryHearSound( CSound *pSound )
 {
+
+#ifdef CBA
+	if (pSound->m_hOwner)
+	{
+		// Blixibon - Don't be afraid of allies
+		if (IRelationType(pSound->m_hOwner) == D_LI)
+			return false;
+
+		// Blixibon - Manhack danger causes soldiers to look stupid
+		if (pSound->m_hOwner->ClassMatches("npc_manhack"))
+			return false;
+	}
+#endif
 	if ( pSound->SoundContext() & SOUND_CONTEXT_COMBINE_ONLY )
 		return true;
 
@@ -1843,6 +1953,11 @@ int CNPC_Combine::SelectCombatSchedule()
 				AnnounceEnemyType( pEnemy );
 			}
 
+#ifdef CBA
+			if (CanDeployManhack() && OccupyStrategySlot(SQUAD_SLOT_COMBINE_DEPLOY_MANHACK))
+				return SCHED_COMBINE_DEPLOY_MANHACK;
+#endif
+
 			if ( HasCondition( COND_CAN_RANGE_ATTACK1 ) && OccupyStrategySlot( SQUAD_SLOT_ATTACK1 ) )
 			{
 				// Start suppressing if someone isn't firing already (SLOT_ATTACK1). This means
@@ -1977,6 +2092,12 @@ int CNPC_Combine::SelectCombatSchedule()
 		// stand up, just in case
 		Stand();
 		DesireStand();
+
+#ifdef CBA
+		// If you can't attack, but you can deploy a manhack, do it!
+		if (CanDeployManhack() && OccupyStrategySlot(SQUAD_SLOT_COMBINE_DEPLOY_MANHACK))
+			return SCHED_COMBINE_DEPLOY_MANHACK;
+#endif
 
 		if( GetEnemy() && !(GetEnemy()->GetFlags() & FL_NOTARGET) && OccupyStrategySlotRange( SQUAD_SLOT_ATTACK1, SQUAD_SLOT_ATTACK2 ) )
 		{
@@ -2282,6 +2403,11 @@ int CNPC_Combine::SelectScheduleAttack()
 	{
 		return SCHED_MELEE_ATTACK1;
 	}
+
+#ifdef CBA
+	if (GetEnemy() && CanDeployManhack() && OccupyStrategySlot(SQUAD_SLOT_COMBINE_DEPLOY_MANHACK))
+		return SCHED_COMBINE_DEPLOY_MANHACK;
+#endif
 
 	// If I'm fighting a combine turret (it's been hacked to attack me), I can't really
 	// hurt it with bullets, so become grenade happy.
@@ -2773,6 +2899,18 @@ void CNPC_Combine::HandleAnimEvent( animevent_t *pEvent )
 
 			handledEvent = true;
 		}
+#ifdef CBA
+		else if (pEvent->event == AE_METROPOLICE_START_DEPLOY)
+		{
+			OnAnimEventStartDeployManhack();
+			return;
+		}
+		else if (pEvent->event == AE_METROPOLICE_DEPLOY_MANHACK)
+		{
+			OnAnimEventDeployManhack(pEvent);
+			return;
+		}
+#endif
 		else
 		{
 			BaseClass::HandleAnimEvent( pEvent );
@@ -3248,6 +3386,24 @@ void CNPC_Combine::AlertSound( void)
 //=========================================================
 void CNPC_Combine::NotifyDeadFriend ( CBaseEntity* pFriend )
 {
+#ifdef CBA
+	// Blixibon - Manhack handling
+	if (pFriend == m_hManhack)
+	{
+		//m_Sentences.Speak( "METROPOLICE_MANHACK_KILLED", SENTENCE_PRIORITY_NORMAL, SENTENCE_CRITERIA_NORMAL );
+
+		// This uses a "COP" concept from npc_metropolice.h
+		SpeakIfAllowed(TLK_COP_MANHACKKILLED, "my_manhack:1", SENTENCE_PRIORITY_NORMAL, SENTENCE_CRITERIA_NORMAL);
+
+		DevMsg("My manhack died!\n");
+		m_hManhack = NULL;
+		return;
+	}
+
+	// No notifications for squadmates' dead manhacks
+	if (FClassnameIs(pFriend, "npc_manhack"))
+		return;
+#endif
 #ifndef COMBINE_SOLDIER_USES_RESPONSE_SYSTEM
 	if ( GetSquad()->NumMembers() < 2 )
 	{
@@ -3796,6 +3952,168 @@ NPC_STATE CNPC_Combine::SelectIdealState( void )
 	return GetIdealState();
 }
 
+#ifdef CBA
+//-----------------------------------------------------------------------------
+// Purpose: I want to deploy a manhack. Can I?
+//-----------------------------------------------------------------------------
+bool CNPC_Combine::CanDeployManhack(void)
+{
+	// Nope, don't have any!
+	if (m_iManhacks < 1)
+		return false;
+
+	if (HasSpawnFlags(SF_COMBINE_NO_MANHACK_DEPLOY))
+		return false;
+
+	// Nope, already have one out.
+	if (m_hManhack != NULL)
+		return false;
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Makes the held manhack solid
+//-----------------------------------------------------------------------------
+void CNPC_Combine::ReleaseManhack(void)
+{
+	Assert(m_hManhack);
+
+	// Make us physical
+	m_hManhack->RemoveSpawnFlags(SF_MANHACK_CARRIED);
+	m_hManhack->CreateVPhysics();
+
+	// Release us
+	m_hManhack->RemoveSolidFlags(FSOLID_NOT_SOLID);
+	m_hManhack->SetMoveType(MOVETYPE_VPHYSICS);
+	m_hManhack->SetParent(NULL);
+
+	// Make us active
+	m_hManhack->RemoveSpawnFlags(SF_NPC_WAIT_FOR_SCRIPT);
+	m_hManhack->ClearSchedule("Manhack released by metropolice");
+
+	// Start him with knowledge of our current enemy
+	if (GetEnemy())
+	{
+		m_hManhack->SetEnemy(GetEnemy());
+		m_hManhack->SetState(NPC_STATE_COMBAT);
+
+		m_hManhack->UpdateEnemyMemory(GetEnemy(), GetEnemy()->GetAbsOrigin());
+	}
+
+	// Place him into our squad so we can communicate
+	if (m_pSquad)
+	{
+		m_pSquad->AddToSquad(m_hManhack);
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pEvent - 
+//-----------------------------------------------------------------------------
+void CNPC_Combine::OnAnimEventStartDeployManhack(void)
+{
+	Assert(m_iManhacks);
+
+	if (m_iManhacks <= 0)
+	{
+		DevMsg("Error: Throwing manhack but out of manhacks!\n");
+		return;
+	}
+
+	m_iManhacks--;
+
+	// Turn off the manhack on our body
+	if (m_iManhacks <= 0)
+	{
+		SetBodygroup(COMBINE_BODYGROUP_MANHACK, false);
+	}
+
+	// Create the manhack to throw
+	CNPC_Manhack* pManhack = (CNPC_Manhack*)CreateEntityByName("npc_manhack");
+
+	Vector	vecOrigin;
+	QAngle	vecAngles;
+
+	int handAttachment = LookupAttachment("lefthand");
+	GetAttachment(handAttachment, vecOrigin, vecAngles);
+
+	pManhack->SetLocalOrigin(vecOrigin);
+	pManhack->SetLocalAngles(vecAngles);
+	pManhack->AddSpawnFlags((SF_MANHACK_PACKED_UP | SF_MANHACK_CARRIED | SF_NPC_WAIT_FOR_SCRIPT));
+
+	// Also fade if our parent is marked to do it
+	if (HasSpawnFlags(SF_NPC_FADE_CORPSE))
+	{
+		pManhack->AddSpawnFlags(SF_NPC_FADE_CORPSE);
+	}
+
+	// Allow modification of the manhack
+	HandleManhackSpawn(pManhack);
+
+	DispatchSpawn(pManhack);
+
+	// Make us move with his hand until we're deployed
+	pManhack->SetParent(this, handAttachment);
+
+	m_hManhack = pManhack;
+
+	m_OutManhack.Set(m_hManhack, pManhack, this);
+}
+
+//-----------------------------------------------------------------------------
+// Anim event handlers
+//-----------------------------------------------------------------------------
+void CNPC_Combine::OnAnimEventDeployManhack(animevent_t* pEvent)
+{
+	if (!m_hManhack)
+		return;
+
+	// Let it go
+	ReleaseManhack();
+
+	Vector forward, right;
+	GetVectors(&forward, &right, NULL);
+
+	IPhysicsObject* pPhysObj = m_hManhack->VPhysicsGetObject();
+
+	if (pPhysObj)
+	{
+		Vector	yawOff = right * random->RandomFloat(-1.0f, 1.0f);
+
+		Vector	forceVel = (forward + yawOff * 16.0f) + Vector(0, 0, 250);
+		Vector	forceAng = vec3_origin;
+
+		// Give us velocity
+		pPhysObj->AddVelocity(&forceVel, &forceAng);
+	}
+
+	// Stop dealing with this manhack
+	//m_hManhack = NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CNPC_Combine::OnScheduleChange()
+{
+	BaseClass::OnScheduleChange();
+
+	// Ensures we deploy the manhack
+	if (m_hManhack && m_hManhack->GetParent() == this)
+	{
+		OnAnimEventDeployManhack(NULL);
+	}
+
+#ifdef EZ2
+	if (!HasCondition(COND_COMBINE_OBSTRUCTED))
+	{
+		m_hObstructor = NULL;
+	}
+#endif
+}
+#endif
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -4026,9 +4344,16 @@ DECLARE_ACTIVITY( ACT_TURRET_CARRY_IDLE )
 DECLARE_ACTIVITY( ACT_TURRET_CARRY_WALK )
 DECLARE_ACTIVITY( ACT_TURRET_CARRY_RUN )
 #endif
+#ifdef CBA
+DECLARE_ACTIVITY(ACT_METROPOLICE_DEPLOY_MANHACK)
+#endif
 
 DECLARE_ANIMEVENT( COMBINE_AE_BEGIN_ALTFIRE )
 DECLARE_ANIMEVENT( COMBINE_AE_ALTFIRE )
+#ifdef CBA
+DECLARE_ANIMEVENT(AE_METROPOLICE_START_DEPLOY);
+DECLARE_ANIMEVENT(AE_METROPOLICE_DEPLOY_MANHACK);
+#endif
 
 DECLARE_SQUADSLOT( SQUAD_SLOT_GRENADE1 )
 DECLARE_SQUADSLOT( SQUAD_SLOT_GRENADE2 )
@@ -4761,5 +5086,23 @@ DEFINE_SCHEDULE
  "		COND_ENEMY_DEAD"
  "		COND_CAN_MELEE_ATTACK1"
  )
+
+#ifdef CBA
+ //=========================================================
+ // The uninterruptible portion of this behavior, whereupon 
+ // the soldier actually releases the manhack.
+ //=========================================================
+ DEFINE_SCHEDULE
+ (
+ SCHED_COMBINE_DEPLOY_MANHACK,
+
+ "	Tasks"
+ "		TASK_SPEAK_SENTENCE					5"	// METROPOLICE_SENTENCE_DEPLOY_MANHACK
+ "		TASK_PLAY_SEQUENCE					ACTIVITY:ACT_METROPOLICE_DEPLOY_MANHACK"
+ "	"
+ "	Interrupts"
+ "		COND_RECEIVED_ORDERS"
+ )
+#endif
 
  AI_END_CUSTOM_NPC()

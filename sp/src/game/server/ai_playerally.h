@@ -139,7 +139,11 @@
 #define TLK_COMBAT_IDLE	"TLK_COMBAT_IDLE"	// Similar to TLK_ATTACKING, but specifically for when *not* currently attacking (e.g. when in cover or reloading)
 #define TLK_LOSTENEMY	"TLK_LOSTENEMY"		// Current enemy has eluded squad
 #define TLK_REFINDENEMY	"TLK_REFINDENEMY"	// Found a previously eluded enemy
+#endif
+
+#ifdef CBA
 #define TLK_THROWGRENADE	"TLK_THROWGRENADE"	// Throwing a grenade
+#define TLK_MELEE	"TLK_MELEE"	// Melee attacking an enemy
 #endif
 
 //-----------------------------------------------------------------------------

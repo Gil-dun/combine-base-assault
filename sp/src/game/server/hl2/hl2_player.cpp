@@ -127,6 +127,10 @@ ConVar player_process_scene_events( "player_process_scene_events", "1", FCVAR_NO
 
 #endif
 
+#ifdef CBA // kinda copied from E:Z2, so thanks Breadmen.
+ConVar sv_player_hands_modelname("sv_player_hands_modelname", "models/weapons/v_hands.mdl", FCVAR_REPLICATED, "Filename of model to use for suit inspect animation");
+#endif
+
 #define	FLASH_DRAIN_TIME	 1.1111	// 100 units / 90 secs
 #define	FLASH_CHARGE_TIME	 50.0f	// 100 units / 2 secs
 
@@ -1210,8 +1214,12 @@ void CHL2_Player::StartAdmireGlovesAnimation( void )
 	CBaseViewModel *vm = GetViewModel( 0 );
 
 	if ( vm && !GetActiveWeapon() )
-	{
-		vm->SetWeaponModel( "models/weapons/v_hands.mdl", NULL );
+	{	
+#ifdef CBA
+		vm->SetWeaponModel(sv_player_hands_modelname.GetString(), NULL);
+#else
+		vm->SetWeaponModel("models/weapons/v_hands.mdl", NULL);
+#endif
 		ShowViewModel( true );
 						
 		int	idealSequence = vm->SelectWeightedSequence( ACT_VM_IDLE );
