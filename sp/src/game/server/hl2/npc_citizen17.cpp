@@ -298,7 +298,18 @@ static const char *g_ppszRandomHeads[] =
 	"male_07.mdl",
 	"female_07.mdl",
 	"male_08.mdl",
+#ifdef CBA
+	"female_08.mdl",
+#endif
 	"male_09.mdl",
+#ifdef CBA
+	"female_09.mdl",
+	"male_10.mdl",
+	"male_11.mdl",
+	"male_12.mdl",
+	"male_13.mdl",
+	"male_14.mdl",
+#endif
 };
 
 static const char *g_ppszModelLocs[] =
@@ -307,6 +318,8 @@ static const char *g_ppszModelLocs[] =
 	"Group01",
 	"Group02",
 	"Group03%s",
+	"Group03%s",
+	"Group03o%s",
 };
 
 #define IsExcludedHead( type, bMedic, iHead) false // see XBox codeline for an implementation
@@ -516,7 +529,11 @@ void CNPC_Citizen::PrecacheAllOfType( CitizenType_t type )
 		}
 	}
 
+#ifdef CBA
+	if ( m_Type == CT_REBEL || CT_REBEL_OUTSKIRT )
+#else
 	if ( m_Type == CT_REBEL )
+#endif
 	{
 		for ( i = 0; i < nHeads; ++i )
 		{
@@ -907,6 +924,7 @@ void CNPC_Citizen::SelectExpressionType()
 		m_ExpressionType = (CitizenExpressionTypes_t)RandomInt( CIT_EXP_SCARED, CIT_EXP_NORMAL );
 		break;
 	case CT_REBEL:
+	case CT_REBEL_OUTSKIRT:
 		m_ExpressionType = (CitizenExpressionTypes_t)RandomInt( CIT_EXP_SCARED, CIT_EXP_ANGRY );
 		break;
 
@@ -998,6 +1016,11 @@ Class_T	CNPC_Citizen::Classify()
 
 	if (GlobalEntity_GetState("citizens_passive") == GLOBAL_ON)
 		return CLASS_CITIZEN_PASSIVE;
+
+#ifdef CBA
+	if (IsGameEndAlly())
+	return CLASS_PLAYER_ALLY_VITAL;
+#endif
 
 	return CLASS_PLAYER_ALLY;
 }
@@ -2140,49 +2163,6 @@ void CNPC_Citizen::OnChangeActivity(Activity eNewActivity)
 {
 	BaseClass::OnChangeActivity(eNewActivity);
 
-#ifdef EZ
-	if (m_Type == CT_LONGFALL)
-	{
-		switch (eNewActivity)
-		{
-		case ACT_JUMP:
-		{
-			// Do the jump particle
-			DispatchParticleEffect("citizen_longfall_jump", PATTACH_POINT_FOLLOW, this, LookupAttachment("backpack_end"));
-
-			// Make the chest eye a different color while we're jumping
-			if (m_pEyeGlow)
-			{
-				m_pEyeGlow->SetRenderColor(LONGFALL_GLOW_CHEST_JUMP_R, LONGFALL_GLOW_CHEST_JUMP_G, LONGFALL_GLOW_CHEST_JUMP_B, LONGFALL_GLOW_CHEST_JUMP_A);
-				m_pEyeGlow->SetBrightness(LONGFALL_GLOW_CHEST_JUMP_BRIGHT, npc_citizen_longfall_glow_chest_jump_fade_enter.GetFloat());
-				m_pEyeGlow->SetScale(LONGFALL_GLOW_CHEST_JUMP_SCALE, npc_citizen_longfall_glow_chest_jump_fade_enter.GetFloat());
-			}
-
-			EmitSound("NPC_Citizen_JumpRebel.Jump");
-		} break;
-
-		case ACT_GLIDE:
-			break;
-
-		case ACT_LAND:
-		{
-			EmitSound("NPC_Citizen_JumpRebel.Land");
-		}
-		// Need to have a default case here due to jump rebels not always switching to ACT_LAND after jumping
-		default:
-		{
-			// If we were jumping, return the chest eye to its normal color
-			if (m_pEyeGlow && m_pEyeGlow->GetBrightness() == LONGFALL_GLOW_CHEST_JUMP_BRIGHT)
-			{
-				m_pEyeGlow->SetRenderColor(LONGFALL_GLOW_CHEST_R, LONGFALL_GLOW_CHEST_G, LONGFALL_GLOW_CHEST_B, LONGFALL_GLOW_CHEST_A);
-				m_pEyeGlow->SetBrightness(LONGFALL_GLOW_CHEST_BRIGHT, npc_citizen_longfall_glow_chest_jump_fade_exit.GetFloat());
-				m_pEyeGlow->SetScale(LONGFALL_GLOW_CHEST_SCALE, npc_citizen_longfall_glow_chest_jump_fade_exit.GetFloat());
-			}
-		}
-		break;
-		}
-	}
-#endif
 	if (eNewActivity == ACT_MELEE_ATTACK1 && GetEnemy())
 	{
 		// Say something when we begin a melee attack
